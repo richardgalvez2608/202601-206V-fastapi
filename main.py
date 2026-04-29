@@ -6,6 +6,7 @@ from fastapi.templating import Jinja2Templates
 
 import os
 
+from pydantic import BaseModel
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -18,6 +19,8 @@ app = FastAPI()
 templates = Jinja2Templates(directory="templates")
 
 
+
+
 def get_db_connection():
     conn = sqlite3.connect(DATABASE)
     conn.row_factory = sqlite3.Row
@@ -27,3 +30,22 @@ def get_db_connection():
 @app.get("/", response_class=HTMLResponse)
 def home(request: Request):
     return templates.TemplateResponse(request=request, name="index.html")
+
+class PostCreate(BaseModel):
+    title: str
+    content: str
+
+
+@app.post("/post-create", status_code=201)
+def create(post: PostCreate):
+    print(post.title, post.content)
+    with get_db_connection() as conn:
+        cursor = conn.execute(
+            "INSERT INTO posts (title, content) VALUES (?, ?)",
+            (post.title, post.content),
+        )
+        conn.commit()
+        last_id = cursor.lastrowid
+
+    return {"id": last_id,"title": post.title,"content": post.content,}
+    return "200"
